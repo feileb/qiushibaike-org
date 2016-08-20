@@ -13,9 +13,9 @@ class HotSpider(scrapy.Spider):
     start_urls = (
         'http://www.qiushibaike.com/hot/1',
     )
-    max_page=10                # hot最多35页
+    max_page=1                # hot最多35页
     curr_page=0
-    download_pic = True        # 头像大小调整需要emacs支持imagemagick，如果不支持，建议不显示头像
+    show_user_pic = False     # 头像大小调整需要emacs支持imagemagick，如果不支持，建议不显示头像
     story_img_file=''
     user_img_file=''
     date = time.localtime()
@@ -45,10 +45,9 @@ class HotSpider(scrapy.Spider):
                 picsrc = urllib2.urlopen(story['img'][0]).read()
                 open(self.story_img_file,"wb").write(picsrc)
 
-        if self.download_pic and story['author_img']:
+        if self.show_user_pic and story['author_img']:
             self.user_img_file = re.search(r'http.*/(.*[jpg|jpeg|png])',story['author_img'][0].lower()).group(1)
             self.user_img_file = r'./user_pic/'+self.user_img_file
-            print '+++++++++++++++++++++'+self.user_img_file
             if not os.path.exists(self.user_img_file):
                 picsrc = urllib2.urlopen(story['author_img'][0]).read()
                 open(self.user_img_file,"wb").write(picsrc)
@@ -60,7 +59,7 @@ class HotSpider(scrapy.Spider):
                 self.curr_page=page
                 of.write(r'* page '+ str(page)+':'+ self.newline)
             of.write(r'- '+r'[[http://www.qiushibaike.com/article/'+str(storyid)+'][糗事'+str(storyid)+']]'+self.newline)
-            if self.download_pic and story['author_img']:
+            if self.show_user_pic and story['author_img']:
                 of.write(r'#+ATTR_HTML: :width 50px'+self.newline)
                 of.write(r'[['+self.user_img_file+r']]   ')
             of.write(r'[[http://www.qiushibaike.com'+story['userlink'][0].encode('utf-8')+']['+story['author'][0].encode('utf-8').strip()+']]'+self.newline)
@@ -87,24 +86,12 @@ class HotSpider(scrapy.Spider):
                 story['author_img'] = item.xpath("./div[@class='author clearfix']/a[1]/img/@src").extract()
             tmptext=item.xpath("./div[@class='content']")
             story['text']=tmptext.xpath('string(.)').extract()
-            #story['text']=item.xpath("./div[@class='content']/descendant-or-self::text()").extract()
             story['img']=item.xpath("./div[@class='thumb']/a/img/@src").extract()
-            # print story['img']
-            # print story['text'][0]
-            # print story
-            # of.write(r'** '+story['url'].encode('utf-8').strip()+self.newline)
-            # print story['url']
-            # of.write(r'#+END_QUOTE'+self.newline)
-            # of.write(r'* %s' % (story['author'][0]))
-            # print story['author'][0]
             yield story
             self.down_pic(story)
             self.write_org(story,page)
 
-        # print 'page='+str(page)
         if(page < self.max_page):
             next_url=response.xpath("//span[@class='next']/../@href").extract()
             next_url='http://www.qiushibaike.com'+next_url[0].strip()
-            # print 'next url:->'+next_url+'page:'+str(page)
-            # next_page = re.search(r'page/(\d*)/',next_url).group(1)
             yield scrapy.Request(next_url, callback=self.parse)
