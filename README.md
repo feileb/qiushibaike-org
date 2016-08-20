@@ -11,4 +11,5 @@
 
     git clone https://github.com/feileb/qiushibaike-org.git
 
+如果emacs没有imagemagick support，不支持图片缩放，不建议打开用户头像功能，
 
