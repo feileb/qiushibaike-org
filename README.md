@@ -18,9 +18,14 @@
 ``` lisp
 (fboundp 'imagemagick-types)
 ```
-如果支持需要设置org-image-actual-width为nil
+如果支持，还需要修改变量```org-image-actual-width```才能在org文件里面修改图片大小
 ``` lisp
 (setq org-image-actual-width nil)
 ```
-详细设置方法可以参考
+或者
+``` lisp
+(setq org-image-actual-width `(300))
+```
+上面两种办法都可以，具体区别可以参考链接：
+
 https://coldnew.github.io/blog/2013/07-14_a5b3f/
