@@ -2,9 +2,8 @@
 import scrapy
 import time
 import os
-import urllib2
-import re
 import platform
+from urllib import request
 from qsbk.items import QsbkItem
 
 class HotSpider(scrapy.Spider):
@@ -13,7 +12,7 @@ class HotSpider(scrapy.Spider):
     start_urls = (
         'http://www.qiushibaike.com/hot/1',
     )
-    max_page=1                # hot最多35页
+    max_page=2                # hot最多35页
     curr_page=0
     show_user_pic = False     # 头像大小调整需要emacs支持imagemagick，如果不支持，建议不显示头像
     story_img_file=''
@@ -39,22 +38,24 @@ class HotSpider(scrapy.Spider):
 
     def down_pic(self,story):
         if story['img']:
-            self.story_img_file = re.search(r'http.*/(.*[jpg|jpeg|png])',story['img'][0].lower()).group(1).lower()
+            self.story_img_file = story['img'][0].lower().split('/')[-1]
             self.story_img_file = r'./story_pic/'+self.story_img_file
             if not os.path.exists(self.story_img_file):
-                picsrc = urllib2.urlopen(story['img'][0]).read()
-                open(self.story_img_file,"wb").write(picsrc)
+                picsrc = request.urlretrieve('http:'+story['img'][0],self.story_img_file)
+                # open(self.story_img_file,"wb").write(picsrc)
 
         if self.show_user_pic and story['author_img']:
-            self.user_img_file = re.search(r'http.*/(.*[jpg|jpeg|png])',story['author_img'][0].lower()).group(1)
+            # self.user_img_file = re.search(r'http.*/(.*[jpg|jpeg|png])',story['author_img'][0].lower()).group(1)
+            self.user_img_file = stroy['author_img'][0].lower().split('/')[-1]
             self.user_img_file = r'./user_pic/'+self.user_img_file
             if not os.path.exists(self.user_img_file):
-                picsrc = urllib2.urlopen(story['author_img'][0]).read()
-                open(self.user_img_file,"wb").write(picsrc)
+                picsrc = request.urlretrieve('http:'+story['author_img'][0],self.user_img_file)
+                # open(self.user_img_file,"wb").write(picsrc)
 
     def write_org(self,story,page):
         with open(self.org_file,'a+') as of:
-            storyid=re.search(r'tag_(\d*)',story['id'][0]).group(1)
+            # storyid=re.search(r'tag_(\d*)',story['id'][0]).group(1)
+            storyid=story['id'][0].split('_')[-1]
             if self.curr_page != page:
                 self.curr_page=page
                 of.write(r'* page '+ str(page)+':'+ self.newline)
@@ -62,8 +63,10 @@ class HotSpider(scrapy.Spider):
             if self.show_user_pic and story['author_img']:
                 of.write(r'#+ATTR_HTML: :width 50px'+self.newline)
                 of.write(r'[['+self.user_img_file+r']]   ')
-            of.write(r'[[http://www.qiushibaike.com'+story['userlink'][0].encode('utf-8')+']['+story['author'][0].encode('utf-8').strip()+']]'+self.newline)
-            of.write(story['text'][0].encode('utf-8').strip()+self.newline)
+            of.write('[[http://www.qiushibaike.com'+story['userlink'][0]+']['+story['author'][0].strip()+']]'+self.newline)
+            # of.write('[[http://www.qiushibaike.com'+story['userlink'][0]+']['+story['author'][0].strip()+']]'+self.newline)
+            if story['text']:
+                of.write(story['text'][0].strip()+self.newline)
             if story['img']:
                 of.write(r'#+ATTR_HTML: :width 300px'+self.newline)
                 of.write(r'[['+self.story_img_file+r']]'+self.newline)
@@ -84,7 +87,7 @@ class HotSpider(scrapy.Spider):
                 story['author_img']=['']
             else:
                 story['author_img'] = item.xpath("./div[@class='author clearfix']/a[1]/img/@src").extract()
-            tmptext=item.xpath("./div[@class='content']")
+            tmptext=item.xpath("./a[@class='contentHerf']/div[@class='content']")
             story['text']=tmptext.xpath('string(.)').extract()
             story['img']=item.xpath("./div[@class='thumb']/a/img/@src").extract()
             yield story
